@@ -21,13 +21,18 @@ export class ShopifyAgent extends BaseAgent {
 
     // Initialize Shopify client if credentials are available
     const shop = process.env.SHOPIFY_SHOP;
+    const clientId = process.env.SHOPIFY_CLIENT_ID;
+    const clientSecret = process.env.SHOPIFY_CLIENT_SECRET;
     const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
 
-    if (shop && accessToken) {
+    if (shop && clientId && clientSecret) {
+      this.shopifyClient = new ShopifyAdminClient({ shop, clientId, clientSecret });
+      this.logger.info(`Shopify client initialized for ${shop} (client credentials flow)`);
+    } else if (shop && accessToken) {
       this.shopifyClient = new ShopifyAdminClient({ shop, accessToken });
-      this.logger.info(`Shopify client initialized for ${shop}`);
+      this.logger.info(`Shopify client initialized for ${shop} (static token)`);
     } else {
-      this.logger.warn("Shopify credentials not set — SHOPIFY_SHOP and SHOPIFY_ACCESS_TOKEN required");
+      this.logger.warn("Shopify credentials not set — need SHOPIFY_SHOP + SHOPIFY_CLIENT_ID/SECRET or SHOPIFY_ACCESS_TOKEN");
     }
 
     // Initialize DeepL client if API key is available
