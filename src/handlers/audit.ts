@@ -56,7 +56,7 @@ export async function handleAudit(
     agent.status = "busy";
 
     // Fetch all products
-    const products = await getAllProducts(agent.shopifyClient, { limit: 250 });
+    const products = await getAllProducts(agent.shopifyClient);
 
     if (products.length === 0) {
       agent.status = "online";
@@ -67,7 +67,7 @@ export async function handleAudit(
     const summary = await auditProducts(products, agent);
 
     // Store report as Directus artifact
-    const client = agent.directusManager.getClient("sev-ai");
+    const client = agent.directus.getClient("sev-ai");
     const artifact = {
       title: `Shopify Audit — ${products.length} products — ${new Date().toISOString().split("T")[0]}`,
       type: "shopify-audit",
@@ -235,8 +235,8 @@ async function auditProducts(
           "fr",
         );
 
-        const titleTranslation = translations.find((t) => t.key === "title");
-        const descTranslation = translations.find((t) => t.key === "body_html");
+        const titleTranslation = translations.translations.find((t: { key: string; value: string | null; locale: string }) => t.key === "title");
+        const descTranslation = translations.translations.find((t: { key: string; value: string | null; locale: string }) => t.key === "body_html");
 
         if (!titleTranslation?.value) {
           issues.push({

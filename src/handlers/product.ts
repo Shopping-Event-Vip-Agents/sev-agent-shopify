@@ -32,8 +32,8 @@ export async function handleProduct(
   const pendingKey = `product:${message.channel_id}:pending`;
   const pendingData = await agent.getMemory(pendingKey);
 
-  if (pendingData && pendingData.product) {
-    return handleProductCompletion(message, agent, pendingData.product as SupplierProductData);
+  if (pendingData && pendingData.value.product) {
+    return handleProductCompletion(message, agent, pendingData.value.product as SupplierProductData);
   }
 
   // Parse product details from the message
@@ -115,7 +115,7 @@ async function handleProductCompletion(
   }
 
   // Clear pending state
-  await agent.setMemory(`product:${message.channel_id}:pending`, null);
+  await agent.setMemory(`product:${message.channel_id}:pending`, { cleared: true });
 
   return createAndPublishProduct(message, agent, merged);
 }
@@ -145,33 +145,28 @@ async function createAndPublishProduct(
       ? enriched.tags.join(", ")
       : (enriched.tags ?? "");
 
-    const shopifyPayload = {
-      product: {
-        title: enriched.title ?? "Untitled",
-        body_html: wrapHtml(enriched.description ?? ""),
-        vendor: enriched.vendor ?? "",
-        product_type: enriched.productType ?? "",
-        tags,
-        status: "draft" as const,
-        variants: [
-          {
-            price: String(enriched.price ?? "0"),
-            sku: enriched.sku ?? "",
-            weight: enriched.weight ? Number(enriched.weight) : undefined,
-            weight_unit: enriched.weightUnit ?? "kg",
-            compare_at_price: enriched.compareAtPrice
-              ? String(enriched.compareAtPrice)
-              : undefined,
-            barcode: enriched.barcode ?? undefined,
-          },
-        ],
-        images: (enriched.imageUrls ?? []).map((src) => ({ src })),
-      },
+    const shopifyPayload: Partial<import("@domien-sev/shopify-sdk").ShopifyProduct> = {
+      title: enriched.title ?? "Untitled",
+      body_html: wrapHtml(enriched.description ?? ""),
+      vendor: enriched.vendor ?? "",
+      product_type: enriched.productType ?? "",
+      tags,
+      status: "draft" as const,
+      variants: [
+        {
+          price: String(enriched.price ?? "0"),
+          sku: enriched.sku ?? "",
+          weight: enriched.weight ? Number(enriched.weight) : 0,
+          weight_unit: enriched.weightUnit ?? "kg",
+        } as import("@domien-sev/shopify-sdk").ShopifyVariant,
+      ],
+      images: (enriched.imageUrls ?? []).map((src, i) => ({
+        src,
+      } as import("@domien-sev/shopify-sdk").ShopifyImage)),
     };
 
     // Create in Shopify
-    const result = await createProduct(agent.shopifyClient!, shopifyPayload);
-    const createdProduct = result.product;
+    const createdProduct = await createProduct(agent.shopifyClient!, shopifyPayload);
 
     // Auto-translate to French
     let translationStatus = "skipped (no DeepL client)";
@@ -205,8 +200,7 @@ async function createAndPublishProduct(
           await registerTranslation(
             agent.shopifyClient!,
             `gid://shopify/Product/${createdProduct.id}`,
-            "fr",
-            fieldsToTranslate,
+            fieldsToTranslate.map((f) => ({ ...f, locale: "fr" })),
           );
           translationStatus = `${fieldsToTranslate.length} fields translated to French`;
         }

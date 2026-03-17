@@ -136,14 +136,14 @@ async function handleImportConfirmation(
   const pendingKey = `import:${message.channel_id}:pending`;
   const pending = await agent.getMemory(pendingKey);
 
-  if (!pending || !pending.products) {
+  if (!pending || !pending.value.products) {
     return agent.reply(
       message,
       "No pending import found. Please share your CSV data first.",
     );
   }
 
-  const products = pending.products as import("@domien-sev/shopify-sdk").SupplierProductData[];
+  const products = pending.value.products as import("@domien-sev/shopify-sdk").SupplierProductData[];
 
   try {
     agent.status = "busy";
@@ -196,7 +196,7 @@ async function handleImportConfirmation(
     const excelBuffer = generateExcelBuffer(matrixify.headers, matrixify.rows);
 
     // Step 4: Store artifact in Directus
-    const client = agent.directusManager.getClient("sev-ai");
+    const client = agent.directus.getClient("sev-ai");
     const artifact = {
       title: `Shopify Import — ${enriched.length} products — ${new Date().toISOString().split("T")[0]}`,
       type: "shopify-import",
@@ -216,7 +216,7 @@ async function handleImportConfirmation(
     await client.request(createItem("artifacts", artifact));
 
     // Clear pending data
-    await agent.setMemory(pendingKey, null);
+    await agent.setMemory(pendingKey, { cleared: true });
 
     agent.status = "online";
 

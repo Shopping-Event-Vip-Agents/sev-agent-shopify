@@ -65,7 +65,7 @@ async function handleSpecificProductTranslation(
   agent: ShopifyAgent,
   productRef: string,
 ): Promise<AgentResponse> {
-  const products = await getAllProducts(agent.shopifyClient!, { limit: 250 });
+  const products = await getAllProducts(agent.shopifyClient!);
   const product = products.find(
     (p) =>
       p.handle === productRef.toLowerCase() ||
@@ -81,17 +81,21 @@ async function handleSpecificProductTranslation(
   }
 
   // Check existing translations via GraphQL
-  const translations = await getProductTranslations(
+  const translationResource = await getProductTranslations(
     agent.shopifyClient!,
     `gid://shopify/Product/${product.id}`,
     "fr",
   );
 
-  const titleTranslation = translations.find((t) => t.key === "title");
-  const descTranslation = translations.find((t) => t.key === "body_html");
+  const titleTranslation = translationResource.translations.find((t: { key: string }) => t.key === "title");
+  const descTranslation = translationResource.translations.find((t: { key: string }) => t.key === "body_html");
 
   const missingFields: string[] = [];
   const translatedFields: string[] = [];
+
+  // Find the digest from translatableContent for each field
+  const titleContent = translationResource.translatableContent.find((t: { key: string }) => t.key === "title");
+  const descContent = translationResource.translatableContent.find((t: { key: string }) => t.key === "body_html");
 
   // Translate missing title
   if (!titleTranslation?.value && product.title) {
@@ -99,8 +103,7 @@ async function handleSpecificProductTranslation(
     await registerTranslation(
       agent.shopifyClient!,
       `gid://shopify/Product/${product.id}`,
-      "fr",
-      [{ key: "title", value: frTitle, translatableContentDigest: titleTranslation?.translatableContent?.digest ?? "" }],
+      [{ key: "title", value: frTitle, locale: "fr", translatableContentDigest: titleContent?.digest ?? "" }],
     );
     translatedFields.push(`Title: "${frTitle}"`);
   } else if (titleTranslation?.value) {
@@ -115,8 +118,7 @@ async function handleSpecificProductTranslation(
     await registerTranslation(
       agent.shopifyClient!,
       `gid://shopify/Product/${product.id}`,
-      "fr",
-      [{ key: "body_html", value: frDesc, translatableContentDigest: descTranslation?.translatableContent?.digest ?? "" }],
+      [{ key: "body_html", value: frDesc, locale: "fr", translatableContentDigest: descContent?.digest ?? "" }],
     );
     translatedFields.push(`Description: translated (${frDesc.substring(0, 60)}...)`);
   } else if (descTranslation?.value) {
@@ -157,25 +159,30 @@ async function handleBulkTranslationScan(
   message: RoutedMessage,
   agent: ShopifyAgent,
 ): Promise<AgentResponse> {
-  const products = await getAllProducts(agent.shopifyClient!, { limit: SCAN_LIMIT });
+  const products = await getAllProducts(agent.shopifyClient!);
+  // Limit scan to SCAN_LIMIT products
+  const productsToScan = products.slice(0, SCAN_LIMIT);
 
   let missingCount = 0;
   let translatedCount = 0;
   const issues: string[] = [];
 
-  for (const product of products) {
-    const translations = await getProductTranslations(
+  for (const product of productsToScan) {
+    const translationResource = await getProductTranslations(
       agent.shopifyClient!,
       `gid://shopify/Product/${product.id}`,
       "fr",
     );
 
-    const titleTranslation = translations.find((t) => t.key === "title");
-    const descTranslation = translations.find((t) => t.key === "body_html");
+    const titleTranslation = translationResource.translations.find((t: { key: string }) => t.key === "title");
+    const descTranslation = translationResource.translations.find((t: { key: string }) => t.key === "body_html");
+    const titleContent = translationResource.translatableContent.find((t: { key: string }) => t.key === "title");
+    const descContent = translationResource.translatableContent.find((t: { key: string }) => t.key === "body_html");
 
     const fieldsToTranslate: Array<{
       key: string;
       value: string;
+      locale: string;
       translatableContentDigest: string;
     }> = [];
 
@@ -185,7 +192,8 @@ async function handleBulkTranslationScan(
       fieldsToTranslate.push({
         key: "title",
         value: frTitle,
-        translatableContentDigest: titleTranslation?.translatableContent?.digest ?? "",
+        locale: "fr",
+        translatableContentDigest: titleContent?.digest ?? "",
       });
     }
 
@@ -195,7 +203,8 @@ async function handleBulkTranslationScan(
       fieldsToTranslate.push({
         key: "body_html",
         value: frDesc,
-        translatableContentDigest: descTranslation?.translatableContent?.digest ?? "",
+        locale: "fr",
+        translatableContentDigest: descContent?.digest ?? "",
       });
     }
 
@@ -204,7 +213,6 @@ async function handleBulkTranslationScan(
         await registerTranslation(
           agent.shopifyClient!,
           `gid://shopify/Product/${product.id}`,
-          "fr",
           fieldsToTranslate,
         );
         translatedCount += fieldsToTranslate.length;
@@ -219,7 +227,7 @@ async function handleBulkTranslationScan(
 
   // Store scan results in shared memory
   await agent.setMemory(`translation-scan:${Date.now()}`, {
-    scannedProducts: products.length,
+    scannedProducts: productsToScan.length,
     missingTranslations: missingCount,
     autoTranslated: translatedCount,
     errors: issues.length,
@@ -227,7 +235,7 @@ async function handleBulkTranslationScan(
   });
 
   const lines = [
-    `**Translation scan complete** — scanned ${products.length} products`,
+    `**Translation scan complete** — scanned ${productsToScan.length} products`,
     "",
     `Found **${missingCount} missing** French translations.`,
     `Auto-translated: **${translatedCount}** fields via DeepL.`,
