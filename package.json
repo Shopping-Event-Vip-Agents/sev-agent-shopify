@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Shopify data input agent — product import, translation, enrichment via Slack",
+  "description": "Shopify data input agent \u2014 product import, translation, enrichment via Slack",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
@@ -13,12 +13,14 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@directus/sdk": "^18.0.0",
     "@domien-sev/agent-sdk": "*",
     "@domien-sev/directus-sdk": "*",
     "@domien-sev/shared-types": "*",
     "@domien-sev/shopify-sdk": "*",
-    "@directus/sdk": "^18.0.0",
-    "@anthropic-ai/sdk": "^0.39.0",
+    "dotenv": "^8.2.0",
+    "node-fetch": "^3.3.2",
     "papaparse": "^5.4.0",
     "xlsx": "^0.18.5"
   },
