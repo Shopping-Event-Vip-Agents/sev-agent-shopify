@@ -1,6 +1,7 @@
 FROM node:22-alpine AS builder
 
 ARG GH_PKG_TOKEN
+ENV GH_PKG_TOKEN=${GH_PKG_TOKEN}
 
 WORKDIR /app
 COPY package.json .npmrc ./
@@ -12,6 +13,7 @@ RUN npm run build
 FROM node:22-alpine
 
 ARG GH_PKG_TOKEN
+ENV GH_PKG_TOKEN=${GH_PKG_TOKEN}
 
 WORKDIR /app
 COPY package.json .npmrc ./

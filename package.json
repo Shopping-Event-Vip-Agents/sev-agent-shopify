@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Shopify agent — product import, NL→FR translation, enrichment, Matrixify export",
+  "description": "Shopify agent \u2014 product import, NL\u2192FR translation, enrichment, Matrixify export",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
@@ -20,7 +20,8 @@
     "@domien-sev/shared-types": "*",
     "@domien-sev/shopify-sdk": "*",
     "dotenv": "^8.2.0",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
