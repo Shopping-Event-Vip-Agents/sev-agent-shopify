@@ -62,7 +62,7 @@ export async function handleTranslate(agent: ShopifyAgent, message: RoutedMessag
       translated++;
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
-      agent.logger.error(`Translation failed for ${resource.resourceId}: ${errMsg}`);
+      console.error(`Translation failed for ${resource.resourceId}: ${errMsg}`);
       errors++;
     }
   }

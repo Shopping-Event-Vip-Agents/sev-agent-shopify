@@ -76,7 +76,7 @@ export async function handleEnrich(agent: ShopifyAgent, message: RoutedMessage):
       }
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
-      agent.logger.error(`Enrichment failed for ${product.title}: ${errMsg}`);
+      console.error(`Enrichment failed for ${product.title}: ${errMsg}`);
     }
   }
 
