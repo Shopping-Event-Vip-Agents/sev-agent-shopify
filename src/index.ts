@@ -4,7 +4,7 @@ import { loadConfig, createHealthEndpoint, createHeartbeatEndpoint } from "@domi
 import { initScheduler, stopScheduler } from "./scheduler.js";
 import { createApiRouter } from "./api/index.js";
 
-const PORT = parseInt(process.env.PORT ?? process.env.AGENT_PORT ?? "3008", 10);
+const PORT = parseInt(process.env.PORT ?? "3000", 10);
 
 async function main() {
   const config = loadConfig();
